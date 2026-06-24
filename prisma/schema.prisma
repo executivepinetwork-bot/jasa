@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  piId        String   @unique
+  username    String   @unique
+  email       String?
+  avatar      String?
+  bio         String?
+  createdAt   DateTime @default(now())
+  
+  services    Service[]
+  orders      Order[]    @relation("buyer")
+  sales       Order[]    @relation("seller")
+  sentChats   Chat[]     @relation("sender")
+  receivedChats Chat[]   @relation("receiver")
+  givenReviews Review[]  @relation("reviewer")
+  receivedReviews Review[] @relation("reviewed")
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  price       Float
+  category    String
+  deliveryDays Int
+  image       String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders      Order[]
+}
+
+model Order {
+  id          String   @id @default(cuid())
+  status      String   @default("pending")
+  amount      Float
+  piTxId      String?  @unique
+  createdAt   DateTime @default(now())
+  completedAt DateTime?
+  
+  buyerId     String
+  buyer       User     @relation("buyer", fields: [buyerId], references: [id])
+  sellerId    String
+  seller      User     @relation("seller", fields: [sellerId], references: [id])
+  serviceId   String
+  service     Service  @relation(fields: [serviceId], references: [id])
+  
+  chats       Chat[]
+  review      Review?
+}
+
+model Chat {
+  id        String   @id @default(cuid())
+  message   String
+  createdAt DateTime @default(now())
+  
+  senderId  String
+  sender    User     @relation("sender", fields: [senderId], references: [id])
+  receiverId String
+  receiver  User     @relation("receiver", fields: [receiverId], references: [id])
+  orderId   String?
+  order     Order?   @relation(fields: [orderId], references: [id])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id])
+  reviewerId String
+  reviewer  User     @relation("reviewer", fields: [reviewerId], references: [id])
+  reviewedId String
+  reviewed  User     @relation("reviewed", fields: [reviewedId], references: [id])
+}
