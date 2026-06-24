@@ -44,36 +44,6 @@ export default function ProfilePage() {
     router.push('/')
   }
 
-  const handleLoginDemo = async () => {
-    const loadingToast = toast.loading('Membuat akun demo...')
-    
-    try {
-      const mockUser = {
-        piId: `pi-${Date.now()}`,
-        username: `user${Math.floor(Math.random() * 1000)}`,
-        email: `user${Math.floor(Math.random() * 1000)}@example.com`,
-        avatar: null
-      }
-
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(mockUser)
-      })
-
-      const data = await res.json()
-      
-      if (data.token) {
-        localStorage.setItem('token', data.token)
-        toast.success('Login berhasil!', { id: loadingToast })
-        window.location.reload()
-      } else {
-        toast.error('Login gagal', { id: loadingToast })
-      }
-    } catch (error) {
-      toast.error('Terjadi kesalahan', { id: loadingToast })
-    }
-  }
 
   if (!isLoggedIn) {
     return (
@@ -101,13 +71,9 @@ export default function ProfilePage() {
               <p style={{color: '#64748B', marginBottom: '2rem', fontSize: '0.95rem', lineHeight: '1.6'}}>
                 Login untuk melihat profil dan mengakses semua fitur marketplace
               </p>
-              <button onClick={handleLoginDemo} className="btn btn-primary" style={{width: '100%', marginBottom: '0.75rem'}}>
+              <button onClick={() => router.push('/login')} className="btn btn-primary" style={{width: '100%'}}>
                 <LogIn size={20} />
-                Login Demo (Testing)
-              </button>
-              <button onClick={() => router.push('/login')} className="btn btn-secondary" style={{width: '100%'}}>
-                <LogIn size={20} />
-                Login dengan Pi Network
+                Sign in with Pi Network
               </button>
             </div>
           </div>

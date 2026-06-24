@@ -1,3 +1,4 @@
+import Script from 'next/script'
 import './globals.css'
 import { Toaster } from 'react-hot-toast'
 
@@ -17,8 +18,9 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
       </head>
       <body>
+        <Script src="https://sdk.minepi.com/pi-sdk.js" strategy="afterInteractive" />
         {children}
-        <Toaster 
+        <Toaster
           position="top-center"
           toastOptions={{
             duration: 3000,
