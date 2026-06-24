@@ -1,26 +1,32 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import BottomNav from '@/components/BottomNav'
 import { ShoppingCart, Clock, Tag, Shield, Palette, Code, PenTool, Megaphone, Package, User, CheckCircle } from 'lucide-react'
 
-export default function ServiceDetailPage({ params }: { params: { id: string } }) {
+export default function ServiceDetailPage() {
+  const params = useParams<{ id: string }>()
+  const serviceId = params.id
   const [service, setService] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
-    fetch(`/api/services/${params.id}`)
+    if (!serviceId) return
+
+    fetch(`/api/services/${serviceId}`)
       .then(r => r.json())
       .then(data => setService(data.service))
-  }, [params.id])
+  }, [serviceId])
 
   const handleOrder = async () => {
+    if (!serviceId) return
+
     const token = localStorage.getItem('token')
     if (!token) {
-      alert('Silakan login terlebih dahulu')
+      alert('Please log in first')
       router.push('/login')
       return
     }
@@ -33,13 +39,13 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ serviceId: params.id })
+        body: JSON.stringify({ serviceId })
       })
 
       const data = await res.json()
 
       if (data.order) {
-        alert('✅ Order dibuat! Silakan bayar dengan Pi')
+        alert('Order created! Please continue with Pi payment.')
         router.push(`/orders/${data.order.id}`)
       } else {
         alert('Error: ' + data.error)
@@ -179,10 +185,10 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
                 marginBottom: '0.5rem'
               }}>
                 <Clock size={14} />
-                Waktu Pengerjaan
+                Delivery Time
               </div>
               <div style={{fontSize: '1.25rem', fontWeight: 700, color: '#1A202C'}}>
-                {service.deliveryDays} Hari
+                {service.deliveryDays} Days
               </div>
             </div>
 
@@ -201,10 +207,10 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
                 marginBottom: '0.5rem'
               }}>
                 <Tag size={14} />
-                Harga
+                Price
               </div>
               <div style={{fontSize: '1.5rem', fontWeight: 700, color: '#7C3AED'}}>
-                π {service.price}
+                Pi {service.price}
               </div>
             </div>
           </div>
@@ -216,7 +222,7 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
             style={{width: '100%', fontSize: '1.05rem', padding: '1rem', marginBottom: '1rem'}}
           >
             <ShoppingCart size={20} strokeWidth={2} />
-            {loading ? 'Processing...' : 'Order Sekarang'}
+            {loading ? 'Processing...' : 'Order Now'}
           </button>
 
           <div className="info-box success">
@@ -224,10 +230,10 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
               <Shield size={20} style={{flexShrink: 0, marginTop: '0.1rem'}} />
               <div>
                 <strong style={{display: 'block', marginBottom: '0.25rem', fontSize: '0.9rem'}}>
-                  Pembayaran Dilindungi Escrow
+                  Escrow-Protected Payment
                 </strong>
                 <p style={{fontSize: '0.85rem', lineHeight: '1.5'}}>
-                  Dana Anda akan ditahan dengan aman hingga pekerjaan selesai sesuai kesepakatan. Jika tidak puas, dana akan dikembalikan.
+                  Your funds are held securely until the work is completed as agreed. If you are not satisfied, the funds can be refunded.
                 </p>
               </div>
             </div>
@@ -245,7 +251,7 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
             gap: '0.5rem'
           }}>
             <CheckCircle size={20} color="#7C3AED" />
-            Deskripsi Layanan
+            Service Description
           </h3>
           <p style={{
             lineHeight: '1.7', 

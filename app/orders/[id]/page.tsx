@@ -1,12 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import BottomNav from '@/components/BottomNav'
 import { CircleDollarSign, CheckCircle, Send, Star, Clock, User, Lock } from 'lucide-react'
 
-export default function OrderDetailPage({ params }: { params: { id: string } }) {
+export default function OrderDetailPage() {
+  const params = useParams<{ id: string }>()
+  const orderId = params.id
   const [order, setOrder] = useState<any>(null)
   const [message, setMessage] = useState('')
   const [user, setUser] = useState<any>(null)
@@ -27,12 +29,14 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
       .then(r => r.json())
       .then(data => setUser(data.user))
 
-    fetchOrder()
-  }, [params.id, router])
+    if (orderId) {
+      fetchOrder(orderId)
+    }
+  }, [orderId, router])
 
-  const fetchOrder = async () => {
+  const fetchOrder = async (id: string) => {
     const token = localStorage.getItem('token')
-    const res = await fetch(`/api/orders/${params.id}`, {
+    const res = await fetch(`/api/orders/${id}`, {
       headers: { Authorization: `Bearer ${token}` }
     })
     const data = await res.json()
@@ -40,11 +44,13 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
   }
 
   const handlePayment = async () => {
+    if (!orderId) return
+
     setLoading(true)
     try {
       const token = localStorage.getItem('token')
       const mockTxId = `pi-tx-${Date.now()}`
-      
+
       const res = await fetch('/api/orders/payment', {
         method: 'POST',
         headers: {
@@ -52,15 +58,15 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          orderId: params.id,
+          orderId,
           piTxId: mockTxId
         })
       })
 
       const data = await res.json()
       if (data.order) {
-        alert('✅ Pembayaran berhasil!')
-        fetchOrder()
+        alert('Payment successful!')
+        fetchOrder(orderId)
       }
     } catch (error) {
       alert('Error: ' + error)
@@ -70,10 +76,12 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
   }
 
   const handleComplete = async () => {
+    if (!orderId) return
+
     setLoading(true)
     try {
       const token = localStorage.getItem('token')
-      const res = await fetch(`/api/orders/${params.id}`, {
+      const res = await fetch(`/api/orders/${orderId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -84,8 +92,8 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
 
       const data = await res.json()
       if (data.order) {
-        alert('✅ Order diselesaikan!')
-        fetchOrder()
+        alert('Order marked as completed!')
+        fetchOrder(orderId)
       }
     } catch (error) {
       alert('Error: ' + error)
@@ -96,7 +104,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
 
   const handleSendChat = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!message.trim()) return
+    if (!message.trim() || !orderId) return
 
     try {
       const token = localStorage.getItem('token')
@@ -109,14 +117,14 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          orderId: params.id,
+          orderId,
           receiverId,
           message
         })
       })
 
       setMessage('')
-      fetchOrder()
+      fetchOrder(orderId)
     } catch (error) {
       alert('Error: ' + error)
     }
@@ -124,6 +132,8 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
 
   const handleReview = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!orderId) return
+
     try {
       const token = localStorage.getItem('token')
       const res = await fetch('/api/reviews', {
@@ -133,7 +143,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          orderId: params.id,
+          orderId,
           rating: review.rating,
           comment: review.comment
         })
@@ -141,8 +151,8 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
 
       const data = await res.json()
       if (data.review) {
-        alert('✅ Review berhasil dikirim!')
-        fetchOrder()
+        alert('Review submitted successfully!')
+        fetchOrder(orderId)
       }
     } catch (error) {
       alert('Error: ' + error)
@@ -173,7 +183,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
           <div style={{fontSize: '0.9rem'}}>
             <div style={{marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
               <CircleDollarSign size={16} />
-              <strong>π {order.amount}</strong>
+              <strong>Pi {order.amount}</strong>
             </div>
             <div style={{marginBottom: '0.5rem', color: '#666', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
               <Clock size={16} />
@@ -201,7 +211,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
             style={{width: '100%', fontSize: '1.05rem'}}
           >
             <CircleDollarSign size={20} />
-            {loading ? 'Processing...' : 'Bayar dengan Pi'}
+            {loading ? 'Processing...' : 'Pay with Pi'}
           </button>
         )}
 
@@ -213,7 +223,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
             style={{width: '100%', fontSize: '1.05rem'}}
           >
             <CheckCircle size={20} />
-            {loading ? 'Processing...' : 'Tandai Selesai'}
+            {loading ? 'Processing...' : 'Mark as Complete'}
           </button>
         )}
 
@@ -222,9 +232,9 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
             <div style={{display: 'flex', alignItems: 'start', gap: '0.5rem'}}>
               <Lock size={18} style={{flexShrink: 0, marginTop: '0.1rem'}} />
               <div>
-                <strong style={{display: 'block'}}>Escrow Aktif</strong>
+                <strong style={{display: 'block'}}>Escrow Active</strong>
                 <p style={{marginTop: '0.25rem'}}>
-                  Dana ditahan sampai seller menyelesaikan pekerjaan
+                  Funds are held until the seller completes the work.
                 </p>
               </div>
             </div>
@@ -236,9 +246,9 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
             <div style={{display: 'flex', alignItems: 'start', gap: '0.5rem'}}>
               <CheckCircle size={18} style={{flexShrink: 0, marginTop: '0.1rem'}} />
               <div>
-                <strong style={{display: 'block'}}>Order Selesai</strong>
+                <strong style={{display: 'block'}}>Order Completed</strong>
                 <p style={{marginTop: '0.25rem'}}>
-                  Pembayaran telah dirilis ke seller
+                  Payment has been released to the seller.
                 </p>
               </div>
             </div>
@@ -249,7 +259,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
           <h3 style={{marginBottom: '0.75rem', fontSize: '1.1rem'}}>Chat</h3>
           <div className="chat-box">
             {order.chats.length === 0 ? (
-              <p style={{color: '#999', textAlign: 'center', padding: '2rem 0'}}>Belum ada chat</p>
+              <p style={{color: '#999', textAlign: 'center', padding: '2rem 0'}}>No messages yet</p>
             ) : (
               order.chats.map((chat: any) => (
                 <div
@@ -271,7 +281,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
             <input
               type="text"
               className="input"
-              placeholder="Tulis pesan..."
+              placeholder="Write a message..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               style={{marginBottom: 0}}
@@ -284,7 +294,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
 
         {order.status === 'completed' && isBuyer && !order.review && (
           <div className="card">
-            <h3 style={{marginBottom: '0.75rem', fontSize: '1.1rem'}}>Berikan Review</h3>
+            <h3 style={{marginBottom: '0.75rem', fontSize: '1.1rem'}}>Leave a Review</h3>
             <form onSubmit={handleReview}>
               <label className="label">Rating</label>
               <div style={{display: 'flex', gap: '0.5rem', marginBottom: '1rem', justifyContent: 'center'}}>
@@ -303,16 +313,16 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                   </button>
                 ))}
               </div>
-              <label className="label">Komentar (opsional)</label>
+              <label className="label">Comment (optional)</label>
               <textarea
                 className="textarea"
-                placeholder="Bagaimana pengalaman kamu?"
+                placeholder="How was your experience?"
                 value={review.comment}
                 onChange={(e) => setReview({...review, comment: e.target.value})}
               />
               <button type="submit" className="btn btn-primary" style={{width: '100%'}}>
                 <Send size={18} />
-                Kirim Review
+                Submit Review
               </button>
             </form>
           </div>
