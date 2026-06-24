@@ -2,15 +2,21 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserFromRequest } from '@/lib/jwt'
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+type RouteContext = {
+  params: Promise<{ id: string }>
+}
+
+export async function GET(req: Request, context: RouteContext) {
   try {
     const payload = await getUserFromRequest(req)
     if (!payload) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await context.params
+
     const order = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         service: true,
         buyer: { select: { id: true, username: true, avatar: true } },
@@ -35,7 +41,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, context: RouteContext) {
   try {
     const payload = await getUserFromRequest(req)
     if (!payload) {
@@ -43,14 +49,15 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     }
 
     const { status } = await req.json()
+    const { id } = await context.params
 
-    const order = await prisma.order.findUnique({ where: { id: params.id } })
+    const order = await prisma.order.findUnique({ where: { id } })
     if (!order || order.sellerId !== payload.userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const updated = await prisma.order.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status,
         ...(status === 'completed' && { completedAt: new Date() })

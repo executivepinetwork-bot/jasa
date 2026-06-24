@@ -1,0 +1,64 @@
+name: Deploy Pi Marketplace
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create .env from secret
+        run: printf '%s' "${{ secrets.PI_MARKETPLACE_ENV_B64 }}" | base64 -d | tr -d '\r' > .env
+
+      - name: Upload source to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 202.134.242.27
+          username: root
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: 22
+          source: "."
+          target: "/home/jasa"
+          overwrite: true
+          strip_components: 0
+          tar_dereference: true
+
+      - name: Install, build, migrate, and restart on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: 202.134.242.27
+          username: root
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: 22
+          script_stop: true
+          script: |
+            set -e
+            APP_DIR="/home/jasa"
+
+            if ! command -v pm2 >/dev/null 2>&1; then
+              npm install -g pm2
+            fi
+
+            cd "$APP_DIR"
+
+            [ -f .env ] || { echo "ERROR: .env not found"; exit 1; }
+            sed -i 's/\r$//' .env
+
+            rm -rf .next
+
+            npm install --no-audit --no-fund
+            npx prisma generate
+            npx prisma migrate deploy
+            npm run build
+
+            pm2 delete pi-marketplace 2>/dev/null || true
+            PORT=5000 pm2 start npm --name "pi-marketplace" -- start
+            pm2 save
+            pm2 list

@@ -2,9 +2,15 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserFromRequest } from '@/lib/jwt'
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+type RouteContext = {
+  params: Promise<{ id: string }>
+}
+
+export async function GET(req: Request, context: RouteContext) {
+  const { id } = await context.params
+
   const service = await prisma.service.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       user: { select: { id: true, username: true, avatar: true, bio: true } }
     }
@@ -17,21 +23,22 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   return NextResponse.json({ service })
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, context: RouteContext) {
   try {
     const payload = await getUserFromRequest(req)
     if (!payload) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const service = await prisma.service.findUnique({ where: { id: params.id } })
+    const { id } = await context.params
+    const service = await prisma.service.findUnique({ where: { id } })
     if (service?.userId !== payload.userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const data = await req.json()
     const updated = await prisma.service.update({
-      where: { id: params.id },
+      where: { id },
       data
     })
 
@@ -41,19 +48,20 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, context: RouteContext) {
   try {
     const payload = await getUserFromRequest(req)
     if (!payload) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const service = await prisma.service.findUnique({ where: { id: params.id } })
+    const { id } = await context.params
+    const service = await prisma.service.findUnique({ where: { id } })
     if (service?.userId !== payload.userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    await prisma.service.delete({ where: { id: params.id } })
+    await prisma.service.delete({ where: { id } })
     return NextResponse.json({ success: true })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
