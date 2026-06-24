@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { Coins, Info, ArrowLeft, Sparkles } from 'lucide-react'
@@ -11,6 +11,7 @@ type PiAuthResponse = {
 }
 
 type PiSdk = {
+  init: (options: { version: string; sandbox?: boolean }) => void
   authenticate: (
     scopes: string[],
     callbacks: { onIncompletePaymentFound: () => void }
@@ -20,37 +21,52 @@ type PiSdk = {
 declare global {
   interface Window {
     Pi?: PiSdk
+    __piMarketplaceInitialized?: boolean
   }
+}
+
+function shouldUseSandbox() {
+  if (typeof window === 'undefined') return false
+  const host = window.location.hostname.toLowerCase()
+  return host.includes('testnet') || host.includes('localhost')
 }
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [sdkReady, setSdkReady] = useState(false)
+  const [piDetected, setPiDetected] = useState(false)
   const router = useRouter()
-
-  const isPiBrowser = useMemo(() => {
-    if (typeof navigator === 'undefined') return false
-    const ua = navigator.userAgent || ''
-    return ua.includes('PiBrowser') || ua.includes('Pi Network')
-  }, [])
 
   useEffect(() => {
     let cancelled = false
     let attempts = 0
 
-    const detectSdk = () => {
+    const detectAndInitSdk = () => {
       if (cancelled) return
-      if (window.Pi?.authenticate) {
-        setSdkReady(true)
-        return
+
+      const pi = window.Pi
+      if (pi?.authenticate) {
+        setPiDetected(true)
+
+        try {
+          if (!window.__piMarketplaceInitialized) {
+            pi.init({ version: '2.0', sandbox: shouldUseSandbox() })
+            window.__piMarketplaceInitialized = true
+          }
+          setSdkReady(true)
+          return
+        } catch (error) {
+          console.error('Failed to initialize Pi SDK:', error)
+        }
       }
-      if (attempts < 20) {
+
+      if (attempts < 40) {
         attempts += 1
-        window.setTimeout(detectSdk, 250)
+        window.setTimeout(detectAndInitSdk, 250)
       }
     }
 
-    detectSdk()
+    detectAndInitSdk()
 
     return () => {
       cancelled = true
@@ -59,7 +75,18 @@ export default function LoginPage() {
 
   const handlePiLogin = async () => {
     if (!window.Pi?.authenticate) {
-      toast.error('Pi SDK is not ready yet. Please open this page in Pi Browser and try again.')
+      toast.error('Pi SDK is not available yet. Please open this page in Pi Browser and try again.')
+      return
+    }
+
+    try {
+      if (!window.__piMarketplaceInitialized) {
+        window.Pi.init({ version: '2.0', sandbox: shouldUseSandbox() })
+        window.__piMarketplaceInitialized = true
+      }
+    } catch (error) {
+      console.error('Pi SDK init error:', error)
+      toast.error('Pi SDK could not be initialized. Please refresh the page and try again.')
       return
     }
 
@@ -244,9 +271,9 @@ export default function LoginPage() {
                   <p style={{ fontSize: '0.8rem', lineHeight: '1.5', color: '#1E40AF', margin: 0 }}>
                     Demo login has been removed. Open this page in Pi Browser so the Pi SDK can authenticate your account.
                   </p>
-                  {!isPiBrowser && (
+                  {!piDetected && (
                     <p style={{ fontSize: '0.8rem', lineHeight: '1.5', color: '#1E40AF', margin: '0.5rem 0 0' }}>
-                      Pi Browser was not detected on this device.
+                      Pi SDK has not been detected yet on this device.
                     </p>
                   )}
                 </div>
