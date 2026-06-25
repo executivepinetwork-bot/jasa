@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserFromRequest } from '@/lib/jwt'
+import { ensureDummyStoreData } from '@/lib/dummy-store'
 
 type RouteContext = {
   params: Promise<{ id: string }>
@@ -9,12 +10,22 @@ type RouteContext = {
 export async function GET(req: Request, context: RouteContext) {
   const { id } = await context.params
 
-  const service = await prisma.service.findUnique({
+  let service = await prisma.service.findUnique({
     where: { id },
     include: {
-      user: { select: { id: true, username: true, avatar: true, bio: true } }
-    }
+      user: { select: { id: true, username: true, avatar: true, bio: true } },
+    },
   })
+
+  if (!service) {
+    await ensureDummyStoreData(prisma)
+    service = await prisma.service.findUnique({
+      where: { id },
+      include: {
+        user: { select: { id: true, username: true, avatar: true, bio: true } },
+      },
+    })
+  }
 
   if (!service) {
     return NextResponse.json({ error: 'Service not found' }, { status: 404 })
@@ -39,7 +50,7 @@ export async function PATCH(req: Request, context: RouteContext) {
     const data = await req.json()
     const updated = await prisma.service.update({
       where: { id },
-      data
+      data,
     })
 
     return NextResponse.json({ service: updated })

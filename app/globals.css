@@ -15,6 +15,10 @@ body {
   padding: 0;
 }
 
+:root {
+  --pi-bottom-inset: 0px;
+}
+
 html {
   margin: 0;
   padding: 0;
@@ -24,7 +28,7 @@ html {
   max-width: 100%;
   margin: 0 auto;
   padding: 1rem;
-  padding-bottom: 90px;
+  padding-bottom: calc(110px + var(--pi-bottom-inset, 0px));
 }
 
 .nav {
@@ -70,7 +74,7 @@ html {
   background: #fff;
   display: flex;
   justify-content: space-around;
-  padding: 0.75rem 0 0.5rem;
+  padding: 0.75rem 0 calc(0.75rem + var(--pi-bottom-inset, 0px));
   box-shadow: 0 -1px 3px rgba(0,0,0,0.08);
   z-index: 100;
   border-top: 1px solid #E2E8F0;

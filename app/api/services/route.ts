@@ -1,28 +1,49 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserFromRequest } from '@/lib/jwt'
+import { ensureDummyStoreData } from '@/lib/dummy-store'
+
+function buildServiceWhere(category: string | null, search: string | null) {
+  return {
+    active: true,
+    ...(category && { category }),
+    ...(search && {
+      OR: [
+        { title: { contains: search, mode: 'insensitive' as const } },
+        { description: { contains: search, mode: 'insensitive' as const } },
+      ],
+    }),
+  }
+}
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const category = searchParams.get('category')
   const search = searchParams.get('search')
 
-  const services = await prisma.service.findMany({
-    where: {
-      active: true,
-      ...(category && { category }),
-      ...(search && {
-        OR: [
-          { title: { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } }
-        ]
-      })
-    },
+  const where = buildServiceWhere(category, search)
+
+  let services = await prisma.service.findMany({
+    where,
     include: {
-      user: { select: { id: true, username: true, avatar: true } }
+      user: { select: { id: true, username: true, avatar: true } },
     },
-    orderBy: { createdAt: 'desc' }
+    orderBy: [{ price: 'asc' }, { createdAt: 'desc' }],
   })
+
+  if (services.length === 0) {
+    const activeServiceCount = await prisma.service.count({ where: { active: true } })
+    if (activeServiceCount === 0) {
+      await ensureDummyStoreData(prisma)
+      services = await prisma.service.findMany({
+        where,
+        include: {
+          user: { select: { id: true, username: true, avatar: true } },
+        },
+        orderBy: [{ price: 'asc' }, { createdAt: 'desc' }],
+      })
+    }
+  }
 
   return NextResponse.json({ services })
 }
@@ -44,8 +65,8 @@ export async function POST(req: Request) {
         category,
         deliveryDays,
         image,
-        userId: payload.userId as string
-      }
+        userId: payload.userId as string,
+      },
     })
 
     return NextResponse.json({ service })

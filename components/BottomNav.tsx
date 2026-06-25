@@ -1,11 +1,36 @@
 'use client'
 
+import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Target, Package, User } from 'lucide-react'
+import { Home, ShoppingBag, Package, User } from 'lucide-react'
 
 export default function BottomNav() {
   const pathname = usePathname()
+
+  useEffect(() => {
+    const updateInset = () => {
+      const viewport = window.visualViewport
+      const viewportInset = viewport
+        ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+        : 0
+      const ua = navigator.userAgent || ''
+      const piBrowserFallback = /PiBrowser|Pi Network|\bwv\b/i.test(ua) ? 20 : 0
+      const inset = Math.max(viewportInset, piBrowserFallback)
+      document.documentElement.style.setProperty('--pi-bottom-inset', `${inset}px`)
+    }
+
+    updateInset()
+    window.addEventListener('resize', updateInset)
+    window.visualViewport?.addEventListener('resize', updateInset)
+    window.visualViewport?.addEventListener('scroll', updateInset)
+
+    return () => {
+      window.removeEventListener('resize', updateInset)
+      window.visualViewport?.removeEventListener('resize', updateInset)
+      window.visualViewport?.removeEventListener('scroll', updateInset)
+    }
+  }, [])
 
   const isActive = (path: string) => {
     if (path === '/') return pathname === '/'
@@ -22,21 +47,21 @@ export default function BottomNav() {
       </Link>
       <Link href="/services" className={`bottom-nav-item ${isActive('/services') ? 'active' : ''}`}>
         <div className="bottom-nav-icon">
-          <Target size={24} strokeWidth={2} />
+          <ShoppingBag size={24} strokeWidth={2} />
         </div>
-        <div>Jasa</div>
+        <div>Store</div>
       </Link>
       <Link href="/orders" className={`bottom-nav-item ${isActive('/orders') ? 'active' : ''}`}>
         <div className="bottom-nav-icon">
           <Package size={24} strokeWidth={2} />
         </div>
-        <div>Pesanan</div>
+        <div>Orders</div>
       </Link>
       <Link href="/profile" className={`bottom-nav-item ${isActive('/profile') ? 'active' : ''}`}>
         <div className="bottom-nav-icon">
           <User size={24} strokeWidth={2} />
         </div>
-        <div>Profil</div>
+        <div>Account</div>
       </Link>
     </div>
   )
