@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
 import Navbar from '@/components/Navbar'
 import BottomNav from '@/components/BottomNav'
 import { CircleDollarSign, CheckCircle, Send, Star, Clock, User, Lock } from 'lucide-react'
@@ -160,22 +161,22 @@ export default function OrderDetailPage() {
               throw new Error(data?.error || 'Failed to finalize Pi payment.')
             }
 
-            alert('Payment successful!')
-            fetchOrder(orderId)
+            toast.success('Payment successful.')
+            await fetchOrder(orderId)
             setLoading(false)
           },
           onCancel: () => {
-            alert('Payment was cancelled.')
+            toast('Payment cancelled.')
             setLoading(false)
           },
           onError: (error: any) => {
-            alert(error?.message || 'Pi payment error.')
+            toast.error(error?.message || 'Pi payment error.')
             setLoading(false)
           },
         }
       )
     } catch (error: any) {
-      alert(error?.message || 'Unable to start Pi checkout.')
+      toast.error(error?.message || 'Unable to start Pi checkout.')
       setLoading(false)
     }
   }
@@ -197,11 +198,11 @@ export default function OrderDetailPage() {
 
       const data = await res.json()
       if (data.order) {
-        alert('Order marked as completed!')
-        fetchOrder(orderId)
+        toast.success('Order marked as completed.')
+        await fetchOrder(orderId)
       }
-    } catch (error) {
-      alert('Error: ' + error)
+    } catch (error: any) {
+      toast.error(error?.message || 'Unable to update the order.')
     } finally {
       setLoading(false)
     }
@@ -229,9 +230,9 @@ export default function OrderDetailPage() {
       })
 
       setMessage('')
-      fetchOrder(orderId)
-    } catch (error) {
-      alert('Error: ' + error)
+      await fetchOrder(orderId)
+    } catch (error: any) {
+      toast.error(error?.message || 'Unable to send the message.')
     }
   }
 
@@ -256,11 +257,11 @@ export default function OrderDetailPage() {
 
       const data = await res.json()
       if (data.review) {
-        alert('Review submitted successfully!')
-        fetchOrder(orderId)
+        toast.success('Review submitted successfully.')
+        await fetchOrder(orderId)
       }
-    } catch (error) {
-      alert('Error: ' + error)
+    } catch (error: any) {
+      toast.error(error?.message || 'Unable to submit the review.')
     }
   }
 

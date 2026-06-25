@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
 import BottomNav from '@/components/BottomNav'
-import { ShoppingCart, Clock, Tag, Shield, Package, User, CheckCircle, ShoppingBag, Gift, Briefcase, Box } from 'lucide-react'
+import { ShoppingCart, Clock, Tag, Shield, User, CheckCircle, ShoppingBag, Gift, Briefcase, Box } from 'lucide-react'
 
 export default function ServiceDetailPage() {
   const params = useParams<{ id: string }>()
@@ -25,7 +26,7 @@ export default function ServiceDetailPage() {
 
     const token = localStorage.getItem('token')
     if (!token) {
-      alert('Please log in first')
+      toast.error('Please sign in first.')
       router.push('/login')
       return
     }
@@ -44,13 +45,13 @@ export default function ServiceDetailPage() {
       const data = await res.json()
 
       if (data.order) {
-        alert('Order created! Please continue with Pi payment.')
+        toast.success('Order created. Continue with Pi payment.')
         router.push(`/orders/${data.order.id}`)
       } else {
-        alert('Error: ' + data.error)
+        toast.error(data.error || 'Failed to create the order.')
       }
-    } catch (error) {
-      alert('Error: ' + error)
+    } catch (error: any) {
+      toast.error(error?.message || 'Unable to create the order.')
     } finally {
       setLoading(false)
     }
